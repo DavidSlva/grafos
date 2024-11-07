@@ -57,7 +57,7 @@ def leer_datos_desde_txt(ruta_archivo):
 # Ruta al archivo de datos
 
 # ruta_datos = 'datos_atraques.txt'
-ruta_datos = 'datos_atraques.txt'
+ruta_datos = 'datos_atraques_con_retraso.txt'
 
 # Leer los datos
 datos = leer_datos_desde_txt(ruta_datos)
@@ -232,12 +232,12 @@ else:
 # ============================
 
 def plot_schedule(schedule):
-    fig, ax = plt.subplots(figsize=(12, 8))
+    fig, ax = plt.subplots(figsize=(14, 8))
 
     # Colores para diferenciar los sitios de atraque
-    colors = plt.cm.Set3.colors
+    colors = plt.cm.Paired.colors
 
-    for idx, task in enumerate(schedule):
+    for task in schedule:
         berth = task['Sitio']
         color = colors[(berth - 1) % len(colors)]
         # Cronograma replanificado
@@ -257,11 +257,12 @@ def plot_delays(schedule):
     retrasos = [task['Retraso'] for task in schedule]
     w_i_values = [task['w_i'] for task in schedule]
 
+    fig, ax = plt.subplots(figsize=(12, 6))
+    width = 0.4
     x = np.arange(len(buques))  # Posición en el eje X
 
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.bar(x - 0.15, retrasos, width=0.3, label='Retraso en salida (delta_e_i)')
-    ax.bar(x + 0.15, w_i_values, width=0.3, label='Retraso adicional (w_i)')
+    ax.bar(x - width/2, retrasos, width, label='Retraso en salida (delta_e_i)')
+    ax.bar(x + width/2, w_i_values, width, label='Retraso adicional (w_i)')
     ax.set_xlabel('Buque')
     ax.set_ylabel('Tiempo')
     ax.set_title('Retrasos por Buque')
@@ -272,15 +273,12 @@ def plot_delays(schedule):
     plt.show()
 
 def plot_costs(total_Z1, total_Z2, total_Z3):
-    labels = ['Z1: Costo de Servicio', 'Z2: Costo de Reasignación y Retrasos', 'Z3: Costo de Retrasos Adicionales']
+    labels = ['Costo de Servicio (Z1)', 'Costo de Reasignación y Retrasos (Z2)', 'Costo de Retrasos Adicionales (Z3)']
     costs = [total_Z1, total_Z2, total_Z3]
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.bar(labels, costs, color=['skyblue', 'salmon', 'lightgreen'])
-    ax.set_ylabel('Costo')
-    ax.set_title('Descomposición de Costos Totales')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
+    ax.pie(costs, labels=labels, autopct='%1.1f%%', startangle=140, wedgeprops={'edgecolor': 'black'})
+    ax.set_title('Distribución de Costos Totales')
     plt.show()
 
 def plot_berth_assignments(schedule):
@@ -288,10 +286,11 @@ def plot_berth_assignments(schedule):
     sitios = [task['Sitio'] for task in schedule]
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.bar(buques, sitios)
+    ax.scatter(buques, sitios, c=sitios, cmap='viridis', s=100, edgecolor='black')
     ax.set_xlabel('Buque')
     ax.set_ylabel('Sitio de Atraque')
     ax.set_title('Asignación de Buques a Sitios de Atraque')
+    plt.colorbar(ax.collections[0], label='Sitio de Atraque')
     plt.tight_layout()
     plt.show()
 
@@ -300,26 +299,32 @@ def plot_priority_vs_delay(schedule):
     retrasos = [task['Retraso'] for task in schedule]
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.scatter(prioridades, retrasos)
+    ax.scatter(prioridades, retrasos, c='blue', s=100, alpha=0.6, edgecolor='black')
     for i, txt in enumerate([task['Buque'] for task in schedule]):
-        ax.annotate(txt, (prioridades[i], retrasos[i]))
+        ax.annotate(txt, (prioridades[i], retrasos[i]), textcoords="offset points", xytext=(5,-5))
     ax.set_xlabel('Prioridad del Buque')
     ax.set_ylabel('Retraso en salida (delta_e_i)')
     ax.set_title('Prioridad vs. Retraso en Salida')
     plt.tight_layout()
     plt.show()
 
-def plot_site_changes(schedule):
-    buques = [task['Buque'] for task in schedule]
+def plot_site_changes_pie(schedule):
     cambios = [task['Cambio de Sitio'] for task in schedule]
+    cambios_si = sum(cambios)  # Número de buques que cambiaron de sitio
+    cambios_no = len(cambios) - cambios_si  # Número de buques que no cambiaron de sitio
 
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.bar(buques, cambios)
-    ax.set_xlabel('Buque')
-    ax.set_ylabel('Cambio de Sitio (1=Sí, 0=No)')
-    ax.set_title('Cambios de Sitio de Atraque respecto al Plan')
-    plt.tight_layout()
+    # Datos para el gráfico de pastel
+    labels = ['Cambio de Sitio (Sí)', 'Cambio de Sitio (No)']
+    sizes = [cambios_si, cambios_no]
+    colors = ['#4CAF50', '#FF5722']
+    explode = (0.1, 0)  # Resaltar el segmento de "Sí"
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140, colors=colors, explode=explode, wedgeprops={'edgecolor': 'black'})
+    ax.set_title('Proporción de Cambios de Sitio de Atraque')
     plt.show()
+
+
 
 # Llamar a las funciones para generar los gráficos
 plot_schedule(schedule)
@@ -327,4 +332,5 @@ plot_delays(schedule)
 plot_costs(total_Z1, total_Z2, total_Z3)
 plot_berth_assignments(schedule)
 plot_priority_vs_delay(schedule)
-plot_site_changes(schedule)
+plot_site_changes_pie(schedule)
+
