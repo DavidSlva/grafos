@@ -1,6 +1,6 @@
 # Descripción de los Parámetros y Conjuntos del Modelo de Replanificación de Atraques
 
-Este documento proporciona una explicación detallada de cada uno de los parámetros y conjuntos utilizados en el modelo de optimización para la replanificación de atraques en un puerto marítimo. El objetivo es facilitar la comprensión de cómo se modela el problema y cómo se utilizan estos datos en el código.
+El objetivo de este README es proporcionar una descripción detallada de los parámetros y conjuntos del modelo de replanificación de atraques.
 
 ---
 

@@ -5,6 +5,7 @@ from docplex.mp.model import Model
 import ast
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
 
 # ============================
 # Lectura de datos desde archivo .txt
@@ -54,11 +55,15 @@ def leer_datos_desde_txt(ruta_archivo):
 
     return datos
 
-# Ruta al archivo de datos
-ruta_datos = 'input_informe.txt'
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print("Uso: python script.py <ruta_archivo_datos>")
+        sys.exit(1)
 
-# Leer los datos
-datos = leer_datos_desde_txt(ruta_datos)
+    ruta_datos = sys.argv[1]
+    datos = leer_datos_desde_txt(ruta_datos)
+
+
 
 # ============================
 # Definición de conjuntos y parámetros a partir de los datos leídos
@@ -187,7 +192,6 @@ solution = mdl.solve(log_output=True)
 
 if solution:
     print("Solución óptima encontrada:")
-    # Almacenaremos los datos para el ploteo
     schedule = []
     total_Z1 = Z1.solution_value
     total_Z2 = Z2.solution_value
@@ -215,7 +219,7 @@ if solution:
             'Sitio': assigned_berth,
             'Inicio': m_i,
             'Fin': e_i_prime,
-            'Inicio Planificado': A_i[i],       # Cambiado de a_i[i] a A_i[i]
+            'Inicio Planificado': A_i[i],
             'Fin Planificado': e_i[i],
             'Retraso': delta_e_i,
             'w_i': w_i,
@@ -315,14 +319,13 @@ def plot_site_changes_pie(schedule):
     labels = ['Cambio de Sitio (Sí)', 'Cambio de Sitio (No)']
     sizes = [cambios_si, cambios_no]
     colors = ['#4CAF50', '#FF5722']
-    explode = (0.1, 0)  # Resaltar el segmento de "Sí"
+    explode = (0.1, 0) 
 
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140, colors=colors, explode=explode, wedgeprops={'edgecolor': 'black'})
     ax.set_title('Proporción de Cambios de Sitio de Atraque')
     plt.show()
 
-# (El resto del código permanece igual hasta la función plot_manipulation_times)
 
 def plot_manipulation_times(H_ik, h_ik, N, M):
     fig, ax = plt.subplots(figsize=(14, 8))
@@ -330,7 +333,6 @@ def plot_manipulation_times(H_ik, h_ik, N, M):
     h_values = []
     labels = []
 
-    # Iterar sobre todas las combinaciones de buques y sitios
     for i in N:
         for k in M:
             key = (i, k)
