@@ -98,7 +98,7 @@ El objetivo de este README es proporcionar una descripción detallada de los par
   - Penaliza los retrasos en la salida de los buques, considerando su prioridad.
 
 - **c3 = 30**  
-  _Costo de retraso adicional para buques que llegaron a tiempo._
+  _Costo de retraso adicional en el tiempo planificado de manejo del buque-._
 
   - Aplica a buques que, aunque llegaron puntualmente, experimentan retrasos en su servicio.
 

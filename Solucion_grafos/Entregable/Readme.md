@@ -1,115 +1,172 @@
 # Sistema de Replanificación en Tiempo Real para Atraques Portuarios
 
+Este proyecto implementa un modelo de **Replanificación de Atraques** usando _IBM CPLEX_ (vía la wrapper `docplex`) en Python.
+
+## Estructura de Archivos
+
+- **`main.py`**: Archivo principal que contiene la construcción y resolución del modelo.  
+  Se ejecuta con:
+
+  ```bash
+  python main.py <archivo_datos.py>
+  ```
+
+  donde `<archivo_datos.py>` es un script Python que define las variables y parámetros (por ejemplo `datos.py`).
+
+- **`datos.py`**: Archivo que contiene la definición de:
+
+  - Conjuntos (`N`, `M`, `M_i`)
+  - Parámetros (`a_i`, `A_i`, `e_i`, `h_ik`, `b_ik`, etc.)
+  - Costos (`c1`, `c2`, `c3`) y la constante grande `B`
+  - El diccionario `ventanas_bloqueo`, que detalla los intervalos de bloqueo para cada (buque, muelle).
+
+- **Funciones de Ploteo**: Incluidas en `main.py` (o en módulos asociados) para mostrar Gantt y otros gráficos de retrasos, costos, etc.
+
+---
+
 ## Requisitos de Instalación
 
 ### Python y Dependencias
 
 1. Asegúrate de contar con **Python 3.10**.
 
-2. Las dependencias del proyecto están listadas en el archivo `requirements.txt`:
-   ```text
-   requests
-   pynomo
-   matplotlib
-   ```
-   Puedes instalar todas las dependencias ejecutando:
+2. Instala las dependencias listadas en `requirements.txt`. Por ejemplo:
    ```bash
    pip install -r requirements.txt
    ```
+   donde `requirements.txt` podría contener:
+   ```text
+   docplex
+   matplotlib
+   numpy
+   ```
 
-### Instalación de CPLEX Community Edition
+### Instalación de CPLEX (IBM ILOG CPLEX)
 
-1. Descarga e instala **CPLEX Community Edition** desde el sitio oficial de IBM:  
+1. Descarga e instala **CPLEX Community Edition** desde el sitio oficial de IBM:
    [Descargar CPLEX Community Edition](https://www.ibm.com/account/reg/es-es/signup?formid=urx-20028)
-
-2. Durante la instalación, se te solicitará instalar un _wrapper_ de Python para **CPLEX**. Este paso es obligatorio para integrar **CPLEX** en el entorno de Python. Utiliza el siguiente comando para realizar esta instalación, ajustando la ruta según la ubicación de tu instalación:
+2. Asegúrate de instalar el _wrapper_ de Python que provee IBM. Por ejemplo, corriendo:
    ```bash
    python "C:\Program Files\IBM\ILOG\CPLEX_Studio_Community2211\python\setup.py" install
    ```
+   _(La ruta puede variar según la versión y carpeta de instalación.)_
 
-> **Nota**: Todos los requisitos anteriores son necesarios y obligatorios para la ejecución del programa.
+---
 
-## Ejecución del Código
+## Ejecución
 
-El programa se ejecuta desde la terminal y permite dos configuraciones de casos:
+Para **ejecutar** el modelo, basta con llamar:
 
-1. **Caso sin retraso**: Es la instancia que no considera un cierre operativo pero si actualiza la planificación en base a datos actualizados de tiempos de llegada y salida.
+```bash
+python main.py datos.py
+```
 
-   ```bash
-   python main.py sin_retraso.txt
+Donde `datos.py` (o cualquier otro nombre) es un archivo Python que define los parámetros del modelo en formato de estructuras Python nativas (listas, diccionarios, etc.).
+
+El solver se ejecutará y producirá:
+
+- **Solución Óptima** (o mensaje de inviabilidad).
+- **Gráficos** de cronograma, retrasos, distribución de costos, y demás.
+
+---
+
+## Descripción de los Parámetros y Conjuntos
+
+En el archivo `datos.py`, se definen:
+
+1. **Conjuntos**:
+
+   ```python
+   N = [1, 2, 3, 4, 5, 6]  # Buques
+   M = [1, 2, 3]           # Sitios de atraque
+   M_i = {
+       1: [2,3],
+       2: [1,2],
+       3: [1,2,3],
+       4: [1,2,3],
+       5: [1,3],
+       6: [1,2,3]
+   }
    ```
 
-2. **Caso con retraso**: Es la instancia que considera un retraso de cinco horas y los datos actualizados de tiempos de llegada y salida.
-   ```bash
-   python main.py con_retraso.txt
+   - `N` y `M` son listas con la numeración de buques y muelles.
+   - `M_i[i]` lista los muelles factibles para cada buque `i`.
+
+2. **Parámetros Base**:
+
+   ```python
+   a_i = {1:5, 2:3, 3:5, 4:5, 5:6, 6:11}  # Llegada real
+   A_i = {1:5, 2:3, 3:1, 4:7, 5:9, 6:12}  # Llegada planificada
+   e_i = {1:9, 2:5, 3:5, 4:9, 5:10, 6:14} # Salida planificada
+   h_ik = {
+     (1,1):3.5, (1,2):2.0, (1,3):3.0,
+     ...
+   }
+   b_ik = {
+     (1,1):1, (1,2):0, (1,3):0,
+     ...
+   }
+   mu_i = {1:12, 2:6, 3:2, 4:1, 5:9, 6:12}
+   c1 = 18
+   c2 = 30
+   c3 = 30
+   B  = 1000  # Big M
    ```
 
-Cada archivo (`sin_retraso.txt` o `con_retraso.txt`) contiene los datos del modelo, incluyendo horarios planificados de llegada y salida, sitios de atraque disponibles, y otros parámetros de planificación y costos.
+   - `a_i`, `A_i`, `e_i`: Tiempos de llegada y salida (real vs planificado).
+   - `h_ik`: Tiempo de manipulación estimado si el buque `i` usa muelle `k`.
+   - `b_ik`: Asignación base; 1 si el buque `i` estaba originalmente asignado al muelle `k`.
+   - `mu_i`: Prioridad de cada buque.
+   - `c1`, `c2`, `c3`: Coeficientes de costo para cambios de muelle y retrasos.
+   - `B`: Constante grande usada en las restricciones de no superposición.
 
-## Descripción de los Parámetros y Conjuntos del Modelo de Replanificación de Atraques
+3. **Ventanas de Bloqueo**:
+   ```python
+   ventanas_bloqueo = {
+       (1,1): [(0, 100)],
+       (1,2): [(0, 100)],
+       (1,3): [(7,11)],
+       (2,1): [],
+       (2,2): [],
+       (2,3): [],
+       (3,1): [],
+       ...
+   }
+   ```
+   - Este diccionario define, **para cada par (buque, muelle)**, una lista de intervalos `(t_start, t_end)` donde ese buque **no puede** permanecer atracado si se asigna a ese muelle.
+   - Por ejemplo, `(1,1): [(0, 100)]` indica que el buque 1 **no** puede atracar en el muelle 1 dentro del intervalo [0..100].
+   - **La lógica de bloqueo** en el modelo se implementa como una **disyunción linealizada**: si el buque `i` está asignado a muelle `k`, entonces su intervalo de atraque no puede solaparse con ninguno de los intervalos de `ventanas_bloqueo[i,k]`.
 
-A continuación, se describe detalladamente cada uno de los parámetros y conjuntos utilizados en un caso de prueba en el modelo de replanificación de atraques.
+---
 
-### Conjuntos
+## Ventanas de Bloqueo (Resumen)
 
-- **N = [1, 2, 3]**  
-  _Lista de buques que deben ser programados para atraque._
+- En el modelo actual, **ignoramos** la simulación antigua de “cierre operativo genérico” y, en su lugar, utilizamos estas **ventanas de bloqueo** específicas por buque-muelle.
+- Cada ventana `(t_init, t_end)` para `(i,k)` se interpreta así:
 
-  - En este caso, hay tres buques identificados con los números 1, 2 y 3.
+  > “Si el buque `i` se asigna al muelle `k`, deberá atracar **antes** de `t_init` **o** después de `t_end`.”
 
-- **M = [1, 2]**  
-  _Lista de sitios de atraque disponibles en el muelle._
-  - Hay dos sitios de atraque disponibles, identificados como 1 y 2.
+  En el **código** (ver `main.py`), esto se modela con **dos** binarias auxiliares (`u_block`, `v_block`) por ventana y la restricción disyuntiva:
 
-### Parámetros de Tiempo
+  ```python
+  e_prime[i] <= t_init + BigM*(1 - u_block[i,k,idx])
+  m_prime[i] >= t_end  - BigM*(1 - v_block[i,k,idx])
+  u_block[i,k,idx] + v_block[i,k,idx] >= b_prime[i,k]
+  ```
 
-- **a_i = {1: 2, 2: 5, 3: 7}**  
-  _Tiempo de llegada real al puerto del buque_ **i**.
+  Esto garantiza que, si `b_prime[i,k] = 1`, el buque no coincida temporalmente con el intervalo bloqueado.
 
-- **A_i = {1: 2, 2: 5, 3: 7}**  
-  _Tiempo de llegada planificado (cronograma base) del buque_ **i**.
+---
 
-- **e_i = {1: 6, 2: 9, 3: 11}**  
-  _Tiempo de salida planificado (cronograma base) del buque_ **i**.
+## Gráficos y Resultados
 
-### Tiempos de Manipulación
+Luego de la optimización, `main.py` produce:
 
-- **H_ik = { (1,1): 4, (1,2): 5, (2,1): 3, (2,2): 4, (3,1): 2, (3,2): 3 }**  
-  _Tiempo mínimo de manipulación (servicio) del buque_ **i** _en el sitio de atraque_ **k**.
+1. **Schedule Final**: Imprime en consola un resumen con la asignación real y planificada.
+2. **Gráficos** de cronograma (`plot_schedule`), retrasos (`plot_delays`), costos (`plot_costs`), entre otros.
 
-- **h_ik = { (1,1): 4.5, (1,2): 5.5, (2,1): 3.5, (2,2): 4.5, (3,1): 2.5, (3,2): 3.5 }**  
-  _Tiempo estimado de manipulación (incluye posibles variaciones) del buque_ **i** _en el sitio de atraque_ **k**.
+Para verlos, basta con ejecutar:
 
-### Parámetros de Ubicación y Tamaño
-
-- **L_i = {1: 100, 2: 150, 3: 120}**  
-  _Longitud del buque_ **i** _(en metros)_.
-
-- **g_k = {1: 0, 2: 200}**  
-  _Posición inicial del sitio de atraque_ **k** _(en metros)_.
-
-- **b_ik = { (1,1): 1, (1,2): 0, (2,1): 0, (2,2): 1, (3,1): 1, (3,2): 0 }**  
-  _Asignación planificada del buque_ **i** _al sitio de atraque_ **k** en el cronograma base.
-
-### Parámetros de Costos
-
-- **c1 = 10**  
-  _Costo por cambiar el sitio de atraque de un buque respecto al cronograma base._
-
-- **c2 = 20**  
-  _Costo por retraso en la salida del buque_ **i** _respecto al cronograma base, ponderado por la prioridad_ **μ_i**.
-
-- **c3 = 30**  
-  _Costo de retraso adicional para buques que llegaron a tiempo._
-
-- **μ_i = {1: 1, 2: 2, 3: 1}**  
-  _Prioridad asignada al buque_ **i**.
-
-### Conjuntos de Sitios Factibles
-
-- **M_i = {1: [1, 2], 2: [1, 2], 3: [1, 2]}**  
-  _Conjunto de sitios de atraque factibles para el buque_ **i**.
-
-### Constante Grande
-
-- **B = 1000**
+```bash
+python main.py datos.py
+```
